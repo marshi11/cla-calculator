@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Kalkulačka čisté mzdy | CLA Czech Republic</title>
+</head>
+<body>
+
+<!--
+  Kalkulačka čisté mzdy pro CLA Czech Republic.
+  Do WordPressu vložte celý obsah <body> včetně <style> a <script>.
+  Výpočet: měsíc roku 2026, pracovní poměr, DPP a DPČ, běžná sazba pojistného.
+  Vue tu nepíše {{ }}, ale [[ ]]. WordPress nebo jiný skript na stránce
+  složené závorky často sebere dřív, než je Vue přečte. Hranaté nechá být.
+-->
+
+<style>
+
+	#cla-mzda[v-cloak] { display: none; }
+
+	#cla-mzda {
+		all: initial;
+		display: block;
+		box-sizing: border-box;
+		max-width: 980px;
+		margin: 0 auto;
+		padding: 8px 0 24px;
+		background: #fff;
+		color: #2F3557;
+		font-family: "Museo Sans", "MuseoSans", Calibri, "Segoe UI", Arial, sans-serif;
+		font-size: 16px;
+		line-height: 1.45;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	#cla-mzda *,
+	#cla-mzda *::before,
+	#cla-mzda *::after { box-sizing: border-box; }
+
+	#cla-mzda h2,
+	#cla-mzda h3,
+	#cla-mzda p,
+	#cla-mzda ul,
+	#cla-mzda li,
+	#cla-mzda label,
+	#cla-mzda legend,
+	#cla-mzda button,
+	#cla-mzda input,
+	#cla-mzda select,
+	#cla-mzda summary {
+		font-family: inherit;
+		color: inherit;
+		letter-spacing: normal;
+		text-transform: none;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		box-shadow: none;
+		line-height: inherit;
+		font-weight: 400;
+		text-decoration: none;
+		min-height: 45px;
+	}
+
+	#cla-mzda button { cursor: pointer; }
+	#cla-mzda ul { list-style: none; }
+
+	#cla-mzda .cla-kicker {
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: #2F3557;
+		margin-bottom: 8px;
+	}
+
+	#cla-mzda .cla-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+	}
+
+	#cla-mzda .cla-langs {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex: none;
+		margin-top: 4px;
+	}
+
+	#cla-mzda .cla-langs button {
+		width: 34px;
+		height: auto;
+		min-height: 0;
+		padding: 0 0 4px;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		line-height: 0;
+		overflow: visible;
+		background: transparent;
+		opacity: 0.55;
+	}
+
+	#cla-mzda .cla-langs button.on {
+		border-bottom-color: #99D2D5;
+		opacity: 1;
+	}
+
+	#cla-mzda .cla-langs button:focus-visible {
+		outline: 2px solid #99D2D5;
+		outline-offset: 3px;
+	}
+
+	#cla-mzda .cla-langs svg {
+		display: block;
+		width: 34px;
+		height: 24px;
+	}
+
+	#cla-mzda h2 {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 34px;
+		line-height: 1.15;
+		font-weight: 400;
+		margin-bottom: 10px;
+	}
+
+	#cla-mzda .cla-lead {
+		color: #3d4460;
+		max-width: 42em;
+		margin-bottom: 22px;
+	}
+
+	#cla-mzda .cla-intro { margin-bottom: 22px; }
+
+	#cla-mzda .cla-top {
+		display: grid;
+		grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+		gap: 28px;
+		align-items: stretch;
+		margin-bottom: 28px;
+	}
+
+	#cla-mzda .cla-options { margin-bottom: 28px; }
+
+	#cla-mzda .cla-switch {
+		position: relative;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0;
+		border: 1px solid #2F3557;
+		margin-bottom: 18px;
+		overflow: hidden;
+	}
+
+	#cla-mzda .cla-switch-knob {
+		position: absolute;
+		z-index: 0;
+		top: 0;
+		left: 0;
+		width: 50%;
+		height: 100%;
+		background: #2F3557;
+		transform: translateX(0);
+		transition: transform 0.22s ease;
+	}
+
+	#cla-mzda .cla-switch.cista .cla-switch-knob {
+		transform: translateX(100%);
+	}
+
+	#cla-mzda .cla-typ {
+		grid-template-columns: 1fr 1fr 1fr;
+		margin-top: 4px;
+		margin-bottom: 18px;
+	}
+
+	#cla-mzda .cla-typ .cla-switch-knob { width: calc(100% / 3); }
+	#cla-mzda .cla-typ.dpp .cla-switch-knob { transform: translateX(100%); }
+	#cla-mzda .cla-typ.dpc .cla-switch-knob { transform: translateX(200%); }
+
+	#cla-mzda .cla-typ button {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 2px;
+		min-height: 64px;
+		line-height: 1.2;
+		padding: 10px 8px;
+	}
+
+	#cla-mzda .cla-typ button small {
+		font-size: 14px;
+		font-weight: 400;
+		line-height: 1.25;
+		text-align: center;
+	}
+
+	#cla-mzda .cla-typ button.on small { color: #d7e8e9; }
+	#cla-mzda .cla-typ button:not(.on) small { color: #5c6478; }
+
+	#cla-mzda .cla-switch button {
+		position: relative;
+		z-index: 1;
+		padding: 12px 10px;
+		font-size: 18px;
+		font-weight: 700;
+		color: #2F3557;
+		background: transparent;
+		transition: color 0.22s ease;
+	}
+
+	#cla-mzda .cla-switch button + button { border-left: 1px solid #2F3557; }
+
+	#cla-mzda .cla-switch button.on {
+		background: transparent;
+		color: #fff;
+	}
+
+	#cla-mzda .cla-switch button:focus-visible,
+	#cla-mzda .cla-step button:focus-visible,
+	#cla-mzda .cla-amount button:focus-visible {
+		outline: 3px solid #99D2D5;
+		outline-offset: 1px;
+	}
+
+	#cla-mzda input:focus,
+	#cla-mzda select:focus,
+	#cla-mzda input:focus-visible,
+	#cla-mzda select:focus-visible {
+		outline: none;
+		box-shadow: none;
+	}
+
+	#cla-mzda .cla-field-label {
+		display: block;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		margin-top: 48px;
+		margin-bottom: 16px;
+		min-height: 0;
+	}
+
+	#cla-mzda .cla-amount {
+		display: flex;
+		align-items: stretch;
+		border: 1px solid #2F3557;
+		background: #fff;
+		margin-bottom: 22px;
+	}
+
+	#cla-mzda .cla-amount button {
+		width: 52px;
+		flex: 0 0 auto;
+		border: 0;
+		background: #F7F7F6;
+		color: #2F3557;
+		font-size: 28px;
+		line-height: 1;
+	}
+
+	#cla-mzda .cla-amount button:first-of-type { border-right: 1px solid #2F3557; }
+	#cla-mzda .cla-amount button:last-of-type { border-left: 1px solid #2F3557; }
+
+	#cla-mzda .cla-amount input {
+		width: 100%;
+		border: 0;
+		background: #fff;
+		color: #2F3557;
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 36px;
+		line-height: 1;
+		padding: 12px 16px;
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+
+	#cla-mzda .cla-amount input::-webkit-outer-spin-button,
+	#cla-mzda .cla-amount input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	#cla-mzda .cla-amount span {
+		display: flex;
+		align-items: center;
+		padding: 0 12px;
+		font-size: 18px;
+		color: #2F3557;
+	}
+
+	#cla-mzda fieldset { border: 0; margin: 0 0 8px; padding: 0; }
+
+	#cla-mzda legend {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 22px;
+		margin-bottom: 12px;
+	}
+
+	#cla-mzda .cla-checks {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+
+	#cla-mzda .cla-check {
+		display: block;
+		position: relative;
+		padding: 10px 12px 10px 40px;
+		background: #F7F7F6;
+		cursor: pointer;
+	}
+
+	#cla-mzda .cla-check input {
+		position: absolute;
+		left: 12px;
+		top: 12px;
+		width: 18px;
+		height: 18px;
+		margin: 0;
+		accent-color: #2F3557;
+	}
+
+	#cla-mzda .cla-check span { display: block; min-width: 0; }
+	#cla-mzda .cla-check small { display: block; color: #5c6478; font-size: 13px; margin-top: 2px; }
+
+	#cla-mzda .cla-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+		gap: 14px 16px;
+		margin-bottom: 8px;
+	}
+
+	#cla-mzda .cla-grid label,
+	#cla-mzda .cla-car label {
+		display: block;
+		font-size: 14px;
+		font-weight: 700;
+		margin-bottom: 6px;
+	}
+
+	#cla-mzda select,
+	#cla-mzda .cla-step input {
+		width: 100%;
+		border: 1px solid #2F3557;
+		background: #fff;
+		color: #2F3557;
+		font-size: 16px;
+		padding: 10px 12px;
+		border-radius: 0;
+	}
+
+	#cla-mzda .cla-money {
+		display: flex;
+		align-items: stretch;
+		border: 1px solid #2F3557;
+		background: #fff;
+	}
+
+	#cla-mzda .cla-money input {
+		width: 100%;
+		min-width: 0;
+		border: 0;
+		background: transparent;
+		color: #2F3557;
+		font-size: 16px;
+		padding: 10px 12px;
+		border-radius: 0;
+		font-variant-numeric: lining-nums tabular-nums;
+	}
+
+	#cla-mzda .cla-money span {
+		display: flex;
+		align-items: center;
+		padding: 0 12px;
+		color: #2F3557;
+		background: #F7F7F6;
+		border-left: 1px solid #2F3557;
+	}
+
+	#cla-mzda .cla-step {
+		display: flex;
+		align-items: stretch;
+	}
+
+	#cla-mzda .cla-step button {
+		width: 42px;
+		border: 1px solid #2F3557;
+		background: #fff;
+		color: #2F3557;
+		font-size: 22px;
+		line-height: 1;
+	}
+
+	#cla-mzda .cla-step input {
+		border-left: 0;
+		border-right: 0;
+		text-align: center;
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+
+	#cla-mzda .cla-step input::-webkit-outer-spin-button,
+	#cla-mzda .cla-step input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+	#cla-mzda .cla-hint { color: #5c6478; font-size: 13px; margin-top: 6px; }
+
+	#cla-mzda details { margin-top: 14px; }
+	#cla-mzda summary { cursor: pointer; font-weight: 700; color: #2F3557; }
+	#cla-mzda summary:focus-visible { outline: 3px solid #99D2D5; }
+
+	#cla-mzda .cla-car {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid #E4E6EA;
+	}
+
+	#cla-mzda .cla-car .cla-check { margin-top: 0; }
+	#cla-mzda .cla-radios { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+	#cla-mzda .cla-extra { margin-top: 16px; }
+	#cla-mzda .cla-extra label {
+		display: block;
+		font-size: 14px;
+		font-weight: 700;
+		margin-bottom: 6px;
+	}
+
+	#cla-mzda .cla-hero {
+		position: relative;
+		overflow: hidden;
+		min-width: 0;
+		container-type: inline-size;
+		background: #2F3557;
+		color: #fff;
+		padding: 28px 24px 32px;
+		min-height: 100%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+
+	#cla-mzda .cla-hero .cla-kicker { position: relative; z-index: 1; color: #99D2D5; }
+	#cla-mzda .cla-kicker-tail::before { content: "\00a0"; }
+	#cla-mzda .cla-hero p { color: #fff; }
+
+	#cla-mzda .cla-big {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: clamp(28px, 14cqi, 48px);
+		line-height: 1.05;
+		margin: 8px 0 14px;
+		position: relative;
+		z-index: 1;
+		animation: cla-vysledek 0.24s ease;
+	}
+
+	#cla-mzda .cla-fade {
+		animation: cla-in 0.24s ease;
+	}
+
+	@keyframes cla-in {
+		from { opacity: 0; transform: translateY(7px); }
+		to { opacity: 1; transform: none; }
+	}
+
+	@keyframes cla-vysledek {
+		from { opacity: 0.45; transform: translateY(8px); }
+		to { opacity: 1; transform: none; }
+	}
+
+	#cla-mzda .cla-hero-note {
+		position: relative;
+		z-index: 1;
+		max-width: 30em;
+		padding-right: 128px;
+		color: #d7e8e9;
+		font-size: 15px;
+	}
+
+	#cla-mzda .cla-shard {
+		position: absolute;
+		top: 0;
+		right: 0;
+		height: 100%;
+		width: auto;
+		aspect-ratio: 1415.73 / 704.36;
+		pointer-events: none;
+	}
+
+	#cla-mzda .cla-section-title {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 26px;
+		margin: 8px 0 6px;
+	}
+
+	#cla-mzda .cla-section-lead { color: #3d4460; margin-bottom: 16px; }
+
+	#cla-mzda .cla-chart {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 18px;
+		margin-bottom: 22px;
+	}
+
+	#cla-mzda .cla-col {
+		background: #F7F7F6;
+		padding: 16px 16px 18px;
+		min-height: 280px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	#cla-mzda .cla-col-name {
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	#cla-mzda .cla-col-sub { color: #5c6478; font-size: 14px; margin-bottom: 8px; }
+
+	#cla-mzda .cla-col-val {
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 28px;
+		line-height: 1.1;
+		margin-top: auto;
+		margin-bottom: 12px;
+	}
+
+	#cla-mzda .cla-plot {
+		height: 120px;
+		display: flex;
+		align-items: flex-end;
+		background:
+			linear-gradient(#E4E6EA, #E4E6EA) left 25% / 100% 1px no-repeat,
+			linear-gradient(#E4E6EA, #E4E6EA) left 50% / 100% 1px no-repeat,
+			linear-gradient(#E4E6EA, #E4E6EA) left 75% / 100% 1px no-repeat;
+	}
+
+	#cla-mzda .cla-bar {
+		width: 100%;
+		min-height: 0;
+	}
+
+	#cla-mzda .cla-bar.emp { background: #99D2D5; }
+	#cla-mzda .cla-bar.stat { background: #2F3557; }
+	#cla-mzda .cla-bar.er { background: #6E7690; }
+
+	#cla-mzda .cla-stack-wrap { margin-bottom: 28px; }
+	#cla-mzda .cla-stack-label { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+
+	#cla-mzda .cla-stack {
+		display: flex;
+		width: 100%;
+		min-height: 46px;
+		background: #F7F7F6;
+		overflow: hidden;
+	}
+
+	#cla-mzda .cla-seg {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #2F3557;
+		font-size: 14px;
+		font-weight: 700;
+		min-width: 0;
+		padding: 8px;
+	}
+
+	#cla-mzda .cla-seg.emp { background: #99D2D5; }
+	#cla-mzda .cla-seg.stat { background: #2F3557; color: #fff; }
+
+	#cla-mzda .cla-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		margin-top: 8px;
+		font-size: 14px;
+	}
+
+	#cla-mzda .cla-legend i {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		margin-right: 6px;
+		vertical-align: -1px;
+	}
+
+	#cla-mzda .cla-legend .emp { background: #99D2D5; }
+	#cla-mzda .cla-legend .stat { background: #2F3557; }
+	#cla-mzda .cla-legend .er { background: #6E7690; }
+
+	#cla-mzda .cla-formula {
+		background: #F7F7F6;
+		padding: 14px 16px;
+		margin-bottom: 22px;
+		font-size: 15px;
+	}
+
+	#cla-mzda .cla-formula strong {
+		font-family: Georgia, "Times New Roman", serif;
+		font-weight: 400;
+		font-size: 18px;
+	}
+
+	#cla-mzda .cla-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+
+	#cla-mzda table {
+		width: 100%;
+		border-collapse: collapse;
+		min-width: 640px;
+		background: #fff;
+	}
+
+	#cla-mzda th,
+	#cla-mzda td {
+		padding: 10px 12px;
+		text-align: right;
+		border-bottom: 1px solid #E4E6EA;
+		font-size: 15px;
+		vertical-align: top;
+		color: #2F3557;
+		background: #fff;
+		white-space: nowrap;
+	}
+
+	#cla-mzda th:first-child,
+	#cla-mzda td:first-child { text-align: left; white-space: normal; }
+
+	#cla-mzda thead th {
+		background: #2F3557;
+		color: #fff;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		border-bottom: 0;
+	}
+
+	#cla-mzda tbody tr:last-child td {
+		background: #E7F5F6;
+		font-weight: 700;
+		border-bottom: 0;
+	}
+
+	#cla-mzda .cla-muted { color: #5c6478; font-weight: 400; }
+	#cla-mzda .cla-rate { display: block; color: #5c6478; font-size: 12px; font-weight: 400; margin-top: 2px; }
+
+	#cla-mzda .cla-notes { margin: 0 0 14px; }
+	#cla-mzda .cla-notes li {
+		position: relative;
+		padding-left: 14px;
+		margin-bottom: 6px;
+		color: #3d4460;
+		font-size: 14px;
+	}
+
+	#cla-mzda .cla-notes li::before {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0.55em;
+		width: 6px;
+		height: 6px;
+		background: #99D2D5;
+	}
+
+	#cla-mzda .cla-foot {
+		color: #5c6478;
+		font-size: 13px;
+		max-width: 78em;
+	}
+
+	#cla-mzda .cla-print-wrap {
+		margin-top: 22px;
+	}
+
+	#cla-mzda .cla-print {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		min-height: 0;
+		padding: 8px 14px;
+		border: 1px solid #2F3557;
+		background: #fff;
+		color: #2F3557;
+		font-size: 14px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+	}
+
+	#cla-mzda .cla-print svg {
+		display: block;
+		width: 16px;
+		height: 16px;
+	}
+
+	#cla-mzda .cla-print:focus-visible {
+		outline: 3px solid #99D2D5;
+		outline-offset: 2px;
+	}
+
+	@media (max-width: 800px) {
+		#cla-mzda h2 { font-size: 28px; }
+		#cla-mzda .cla-top,
+		#cla-mzda .cla-chart,
+		#cla-mzda .cla-grid { grid-template-columns: 1fr; }
+		#cla-mzda .cla-big { font-size: 40px; }
+		#cla-mzda .cla-amount input { font-size: 30px; }
+		#cla-mzda .cla-col { min-height: 0; }
+		#cla-mzda .cla-plot { height: 72px; }
+		#cla-mzda .cla-typ button { font-size: 14px; padding: 8px 4px; min-height: 72px; }
+		#cla-mzda .cla-hero .cla-kicker { padding-right: 120px; }
+		#cla-mzda .cla-hero .cla-kicker-tail { display: block; }
+		#cla-mzda .cla-hero .cla-kicker-tail::before { content: none; }
+	}
+
+	@media (max-width: 379px) {
+		#cla-mzda .cla-shard { right: -64px; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		#cla-mzda .cla-switch-knob,
+		#cla-mzda .cla-switch button,
+		#cla-mzda .cla-fade,
+		#cla-mzda .cla-big {
+			transition: none;
+			animation: none;
+		}
+	}
+
+	@media print {
+		footer,
+		.main-nav-group {
+			display: none !important;
+		}
+
+		#cla-mzda {
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
+
+		#cla-mzda .cla-print-wrap,
+		#cla-mzda .cla-langs,
+		#cla-mzda .cla-detail {
+			display: none !important;
+		}
+	}
+</style>
+
+<div id="cla-mzda" v-cloak :lang="lang">
+	<div class="cla-intro">
+		<div class="cla-head">
+			<p class="cla-kicker">[[ t.kicker ]]</p>
+			<div class="cla-langs" role="group" :aria-label="t.jazyk">
+				<button type="button" @click="setLang('cs')" :class="{ on: lang === 'cs' }" :aria-pressed="lang === 'cs' ? 'true' : 'false'" aria-label="Čeština" title="Čeština">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" aria-hidden="true">
+						<path fill="#fff" d="M0 0h640v240H0z"/>
+						<path fill="#d7141a" d="M0 240h640v240H0z"/>
+						<path fill="#11457e" d="M360 240 0 0v480z"/>
+					</svg>
+				</button>
+				<button type="button" @click="setLang('en')" :class="{ on: lang === 'en' }" :aria-pressed="lang === 'en' ? 'true' : 'false'" aria-label="English" title="English">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" aria-hidden="true">
+						<path fill="#bd3d44" d="M0 0h640v480H0"/>
+						<path stroke="#fff" stroke-width="37" d="M0 55.3h640M0 129h640M0 203h640M0 277h640M0 351h640M0 425h640"/>
+						<path fill="#192f5d" d="M0 0h364.8v258.5H0"/>
+						<marker id="cla-us-star" markerHeight="30" markerWidth="30">
+							<path fill="#fff" d="m14 0 9 27L0 10h28L5 27z"/>
+						</marker>
+						<path fill="none" marker-mid="url(#cla-us-star)" d="m0 0 16 11h61 61 61 61 60L47 37h61 61 60 61L16 63h61 61 61 61 60L47 89h61 61 60 61L16 115h61 61 61 61 60L47 141h61 61 60 61L16 166h61 61 61 61 60L47 192h61 61 60 61L16 218h61 61 61 61 60z"/>
+					</svg>
+				</button>
+			</div>
+		</div>
+		<div class="cla-switch cla-typ" :class="typ" role="group" :aria-label="t.typAria">
+			<span class="cla-switch-knob" aria-hidden="true"></span>
+			<button type="button" :class="{ on: typ === 'pp' }" :aria-pressed="typ === 'pp' ? 'true' : 'false'" @click="setTyp('pp')">PP<small>[[ t.pp ]]</small></button>
+			<button type="button" :class="{ on: typ === 'dpp' }" :aria-pressed="typ === 'dpp' ? 'true' : 'false'" @click="setTyp('dpp')">DPP<small>[[ t.dpp ]]</small></button>
+			<button type="button" :class="{ on: typ === 'dpc' }" :aria-pressed="typ === 'dpc' ? 'true' : 'false'" @click="setTyp('dpc')">DPČ<small>[[ t.dpc ]]</small></button>
+		</div>
+		<h2>[[ nadpis ]]</h2>
+		<p class="cla-lead cla-fade" :key="typ + mode + lang">[[ lead ]]</p>
+	</div>
+
+	<div class="cla-top">
+		<div>
+			<div class="cla-switch" :class="mode" role="group" :aria-label="t.rezimAria">
+				<span class="cla-switch-knob" aria-hidden="true"></span>
+				<button type="button" :class="{ on: mode === 'hruba' }" :aria-pressed="mode === 'hruba' ? 'true' : 'false'" @click="setMode('hruba')">[[ rezimHruba ]]</button>
+				<button type="button" :class="{ on: mode === 'cista' }" :aria-pressed="mode === 'cista' ? 'true' : 'false'" @click="setMode('cista')">[[ rezimCista ]]</button>
+			</div>
+
+			<label class="cla-field-label cla-fade" :key="typ + mode" for="cla-castka">[[ vstupLabel ]]</label>
+			<div class="cla-amount">
+				<button type="button" @click="krokCastky(-1000)" :aria-label="t.snizit">−</button>
+				<input id="cla-castka" type="text" inputmode="numeric" autocomplete="off" :value="castkaText" @input="zapisCastku" @blur="doplnCastku" @focus="$event.target.select()">
+				<span>[[ t.mena ]]</span>
+				<button type="button" @click="krokCastky(1000)" :aria-label="t.zvysit">+</button>
+			</div>
+		</div>
+
+		<div class="cla-hero">
+			<svg class="cla-shard" aria-hidden="true" viewBox="0 0 1415.73 704.36" xmlns="http://www.w3.org/2000/svg">
+				<g clip-path="url(#cla-strep)">
+					<polygon fill="#66C3D0" points="1120.74,280.7 355.08,-400.73 409.27,-709.03 743.87,-539.21"/>
+					<polygon fill="#FEFEFE" points="1120.74,280.7 1886.4,962.13 1832.21,1270.43 1497.61,1100.61"/>
+					<polygon fill="#2F3557" points="1120.74,280.7 1488.07,607.62 2632.41,484.56 1900.92,-350.11 743.87,-539.21"/>
+				</g>
+				<defs>
+					<clipPath id="cla-strep">
+						<rect width="1415.73" height="704.36"/>
+					</clipPath>
+				</defs>
+			</svg>
+			<p class="cla-kicker cla-fade" :key="typ + mode"><span>[[ vystup.hlavni ]]</span><span class="cla-kicker-tail" v-if="vystup.konec">[[ vystup.konec ]]</span></p>
+			<p class="cla-big" :key="vysledekKlic">[[ kc(heroCastka) ]]</p>
+			<p class="cla-hero-note cla-fade" :key="typ + mode">[[ heroPoznamka ]]</p>
+		</div>
+	</div>
+
+	<div class="cla-options">
+			<fieldset>
+				<legend>[[ t.slevy ]]</legend>
+				<div class="cla-checks">
+					<label class="cla-check">
+						<input type="checkbox" v-model="poplatnik">
+						<span>[[ t.poplatnik ]]<small>[[ t.poplatnikHint ]]</small></span>
+					</label>
+					<label class="cla-check">
+						<input type="checkbox" v-model="ztp">
+						<span>[[ t.ztp ]]<small>[[ t.ztpHint ]]</small></span>
+					</label>
+					<label class="cla-check">
+						<input type="checkbox" v-model="duchodce">
+						<span>[[ t.duchodce ]]<small>[[ t.duchodceHint ]]</small></span>
+					</label>
+					<label class="cla-check">
+						<input type="checkbox" v-model="bezMvz">
+						<span>[[ t.mvz ]]<small v-html="t.mvzHint"></small></span>
+					</label>
+				</div>
+
+				<div class="cla-grid">
+
+					<div>
+						<label for="cla-deti">[[ t.deti ]]</label>
+						<div class="cla-step">
+							<button type="button" @click="zmenDeti(-1)" :aria-label="t.detiMene">−</button>
+							<input id="cla-deti" type="number" min="0" max="15" step="1" v-model.number="deti">
+							<button type="button" @click="zmenDeti(1)" :aria-label="t.detiVice">+</button>
+						</div>
+					</div>
+					<div>
+						<label for="cla-deti-ztp">[[ t.detiZtp ]]</label>
+						<div class="cla-step">
+							<button type="button" @click="zmenDetiZtp(-1)" :aria-label="t.detiZtpMene">−</button>
+							<input id="cla-deti-ztp" type="number" min="0" :max="detiKladne" step="1" v-model.number="detiZtp">
+							<button type="button" @click="zmenDetiZtp(1)" :aria-label="t.detiZtpVice">+</button>
+						</div>
+					</div>
+					<div>
+						<label for="cla-invalidita">[[ t.invalidita ]]</label>
+						<select id="cla-invalidita" v-model="invalidita">
+							<option value="zadna">[[ t.invZadna ]]</option>
+							<option value="castecna">[[ t.invCastecna ]]</option>
+							<option value="plna">[[ t.invPlna ]]</option>
+						</select>
+					</div>
+				</div>
+				<p class="cla-hint" v-if="v.zvyhodneni > 0">[[ detiAktivni ]]</p>
+				<p class="cla-hint" v-else>[[ t.detiHint ]]</p>
+			</fieldset>
+
+			<details>
+				<summary>[[ t.vozidloNadpis ]]</summary>
+				<div class="cla-car">
+					<label for="cla-vozidlo">[[ t.vozidloCena ]]</label>
+					<div class="cla-money">
+						<input id="cla-vozidlo" type="text" inputmode="numeric" autocomplete="off" :value="vozidloText" @input="zapisVozidlo" @blur="doplnVozidlo" @focus="$event.target.select()">
+						<span>[[ t.mena ]]</span>
+					</div>
+					<p class="cla-hint">[[ t.vozidloHint ]]</p>
+					<div class="cla-radios" v-if="vozidloKladne > 0">
+						<label class="cla-check">
+							<input type="radio" value="bezna" v-model="autoSazba">
+							<span>[[ t.autoBezne ]]<small>[[ t.autoBezneHint ]]</small></span>
+						</label>
+						<label class="cla-check">
+							<input type="radio" value="nizkoemisni" v-model="autoSazba">
+							<span>[[ t.autoNizko ]]<small>[[ t.autoNizkoHint ]]</small></span>
+						</label>
+						<label class="cla-check">
+							<input type="radio" value="bezemisni" v-model="autoSazba">
+							<span>[[ t.autoNula ]]<small>[[ t.autoNulaHint ]]</small></span>
+						</label>
+					</div>
+				</div>
+				<div class="cla-extra">
+					<label for="cla-nepenezni">[[ t.nepenezni ]]</label>
+					<div class="cla-money">
+						<input id="cla-nepenezni" type="text" inputmode="numeric" autocomplete="off" :value="nepenezniText" @input="zapisNepenezni" @blur="doplnNepenezni" @focus="$event.target.select()">
+						<span>[[ t.mena ]]</span>
+					</div>
+					<p class="cla-hint">[[ t.nepenezniHint ]]</p>
+				</div>
+			</details>
+	</div>
+
+	<h3 class="cla-section-title">[[ t.kdo ]]</h3>
+	<p class="cla-section-lead">[[ t.kdoLead ]]</p>
+
+	<div class="cla-chart">
+		<article class="cla-col">
+			<p class="cla-col-name">[[ t.zamestnanec ]]</p>
+			<p class="cla-col-sub">[[ t.naUcet ]]</p>
+			<div class="cla-plot" aria-hidden="true"><div class="cla-bar emp" :style="{ height: vyska(v.cista) }"></div></div>
+			<p class="cla-col-val">[[ kc(v.cista) ]]</p>
+		</article>
+		<article class="cla-col">
+			<p class="cla-col-name">[[ t.stat ]]</p>
+			<p class="cla-col-sub">[[ statPodtitul ]]</p>
+			<div class="cla-plot" aria-hidden="true"><div class="cla-bar stat" :style="{ height: vyska(Math.abs(v.stat)) }"></div></div>
+			<p class="cla-col-val">[[ kc(Math.abs(v.stat)) ]]</p>
+		</article>
+		<article class="cla-col">
+			<p class="cla-col-name">[[ t.zamestnavatel ]]</p>
+			<p class="cla-col-sub">[[ t.cenaPracePod ]]</p>
+			<div class="cla-plot" aria-hidden="true"><div class="cla-bar er" :style="{ height: vyska(v.cenaPrace) }"></div></div>
+			<p class="cla-col-val">[[ kc(v.cenaPrace) ]]</p>
+		</article>
+	</div>
+
+	<div class="cla-stack-wrap" v-if="v.cista >= 0 && v.stat >= 0 && v.cenaPrace > 0">
+		<p class="cla-stack-label">[[ t.kam ]]</p>
+		<div class="cla-stack" role="img" :aria-label="podilText">
+			<div class="cla-seg emp" :style="{ width: podil(v.cista) }"><span v-if="v.cista / v.cenaPrace > 0.14">[[ pct(v.cista) ]]</span></div>
+			<div class="cla-seg stat" :style="{ width: podil(v.stat) }"><span v-if="v.stat / v.cenaPrace > 0.14">[[ pct(v.stat) ]]</span></div>
+		</div>
+		<div class="cla-legend">
+			<span><i class="emp"></i> [[ t.zamestnanec ]] [[ pct(v.cista) ]]</span>
+			<span><i class="stat"></i> [[ t.stat ]] [[ pct(v.stat) ]]</span>
+			<span>[[ t.dohromady ]]</span>
+		</div>
+	</div>
+
+	<p class="cla-formula">
+		<strong>[[ kc(v.hruba) ]]</strong>
+		− [[ kc(v.socEe) ]] [[ t.socialni ]]
+		− [[ kc(v.zdravEe) ]] [[ t.zdravotni ]]
+		<span v-if="v.danKZaplaceni >= 0">− [[ kc(v.danKZaplaceni) ]] [[ t.dan ]]</span>
+		<span v-else>+ [[ kc(v.bonus) ]] [[ t.bonus ]]</span>
+		= <strong>[[ kc(v.cista) ]] [[ cistaNazev ]]</strong>
+	</p>
+
+	<div class="cla-detail">
+	<h3 class="cla-section-title">[[ t.tok ]]</h3>
+	<div class="cla-table-wrap">
+		<table>
+			<thead>
+				<tr>
+					<th>[[ t.polozka ]]</th>
+					<th>[[ t.zamestnanec ]]</th>
+					<th>[[ t.stat ]]</th>
+					<th>[[ t.zamestnavatel ]]</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>[[ hrubaNazev ]]</td>
+					<td>+ [[ kc(v.hruba) ]]</td>
+					<td class="cla-muted">—</td>
+					<td>− [[ kc(v.hruba) ]]</td>
+				</tr>
+				<tr>
+					<td>[[ t.zdravotniPoj ]]<span class="cla-rate">[[ zdravPopis ]]</span></td>
+					<td>− [[ kc(v.zdravEe) ]]</td>
+					<td>+ [[ kc(v.zdravEe + v.zdravEr) ]]</td>
+					<td>− [[ kc(v.zdravEr) ]]</td>
+				</tr>
+				<tr>
+					<td>[[ t.socialniPoj ]]<span class="cla-rate">[[ socPopis ]]</span></td>
+					<td>− [[ kc(v.socEe) ]]</td>
+					<td>+ [[ kc(v.socEe + v.socEr) ]]</td>
+					<td>− [[ kc(v.socEr) ]]</td>
+				</tr>
+				<tr>
+					<td>[[ t.zaloha ]]<span class="cla-rate">[[ t.danSazba ]]</span></td>
+					<td>− [[ kc(v.danPred) ]]</td>
+					<td>+ [[ kc(v.danPred) ]]</td>
+					<td class="cla-muted">—</td>
+				</tr>
+				<tr>
+					<td>[[ t.slevyRadek ]]<span class="cla-rate">[[ slevyPopis ]]</span></td>
+					<td>+ [[ kc(v.uplatnene) ]]</td>
+					<td>− [[ kc(v.uplatnene) ]]</td>
+					<td class="cla-muted">—</td>
+				</tr>
+				<tr>
+					<td>[[ t.vysledek ]]</td>
+					<td>+ [[ kc(v.cista) ]]</td>
+					<td>[[ v.stat >= 0 ? '+' : '−' ]] [[ kc(Math.abs(v.stat)) ]]</td>
+					<td>− [[ kc(v.cenaPrace) ]]</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<ul class="cla-notes" v-if="v.poznamky.length">
+		<li v-for="text in v.poznamky">[[ text ]]</li>
+	</ul>
+
+	<p class="cla-foot">[[ t.foot ]]</p>
+	</div>
+	<div class="cla-print-wrap">
+		<button type="button" class="cla-print" @click="tisk">
+			<svg viewBox="0 0 24 24" aria-hidden="true">
+				<path fill="currentColor" d="M7 3h10v4H7V3zM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2zm4 8h6v-3H9v3zm9-5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+			</svg>
+			[[ t.tisk ]]
+		</button>
+	</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js" integrity="sha256-ngFW3UnAN0Tnm76mDuu7uUtYEcG3G5H1+zioJw3t+68=" crossorigin="anonymous"></script>
+<script>
+	(function () {
+		let aktivniLang = "cs";
+		try {
+			if (new URLSearchParams(window.location.search).get("lang") === "en") aktivniLang = "en";
+		} catch (e) {}
+
+		const ROK = {
+			minMzda: 22400,
+			hranice23: 146901, // solidární dan
+			slevaPoplatnik: 2570,
+			slevaInv12: 210,
+			slevaInv3: 420,
+			slevaZtp: 1345,
+			deti: [1267, 1860, 2320],
+			bonusMinPrijem: 11200,
+			bonusMinCastka: 50,
+			stropSocRok: 2350416,
+			limitDpp: 11999,
+			limitDpc: 4499
+		};
+
+		function cele(n) {
+			const cislo = Number(n);
+			if (!isFinite(cislo)) return 0;
+			return Math.round(cislo);
+		}
+
+		function formatTisice(n) {
+			const celeCislo = Math.max(0, cele(n));
+			const oddelovac = aktivniLang === "en" ? "," : " ";
+			return String(celeCislo).replace(/\B(?=(\d{3})+(?!\d))/g, oddelovac);
+		}
+
+		function formatKc(n, lang) {
+			const hodnota = Math.round((Number(n) || 0) * 100) / 100;
+			const whole = Math.abs(hodnota - Math.round(hodnota)) < 0.001;
+			const en = lang === "en";
+			return hodnota.toLocaleString(en ? "en-GB" : "cs-CZ", {
+				minimumFractionDigits: whole ? 0 : 2,
+				maximumFractionDigits: whole ? 0 : 2
+			}) + (en ? " CZK" : " Kč");
+		}
+
+		const SLOVNIK = {
+			cs: {
+				kicker: "Mzdová kalkulačka 2026",
+				jazyk: "Jazyk",
+				typAria: "Typ spolupráce",
+				pp: "pracovní poměr",
+				dpp: "dohoda o provedení práce",
+				dpc: "dohoda o pracovní činnosti",
+				rezimAria: "Způsob výpočtu",
+				snizit: "Snížit o 1 000 Kč",
+				zvysit: "Zvýšit o 1 000 Kč",
+				mena: "Kč",
+				slevy: "Slevy a zvýhodnění",
+				poplatnik: "Sleva na poplatníka",
+				poplatnikHint: "2 570 Kč měsíčně, kdo podepsal růžové prohlášení poplatníka",
+				ztp: "Průkaz ZTP/P",
+				ztpHint: "sleva 1 345 Kč, lze kombinovat s invaliditou",
+				duchodce: "Pracující starobní důchodce",
+				duchodceHint: "neplatí 6,5 % na důchodovém pojištění, zůstává 0,6 % nemocenské",
+				mvz: "Neuplatňovat minimální vyměřovací základ (MVZ)",
+				mvzHint: "MVZ znamená, že se zdravotní pojištění počítá nejméně z minimální mzdy 22 400 Kč. Když je mzda nebo odměna nižší, zaměstnanec rozdíl doplácí. <b>Zaškrtněte u studentů, důchodců, osob na mateřské (MD) či rodičovské (RD), osob celodenně pečujících o dítě do 7 let</b>, lidí v evidenci na úřadu práce a dalších, kterých se tento doplatek netýká.",
+				deti: "Počet dětí",
+				detiMene: "Ubrat jedno dítě",
+				detiVice: "Přidat dítě",
+				detiZtp: "Z toho dětí s průkazem ZTP/P",
+				detiZtpMene: "Méně dětí s ZTP/P",
+				detiZtpVice: "Více dětí s ZTP/P",
+				invalidita: "Invalidní důchod",
+				invZadna: "žádný",
+				invCastecna: "I. a II. stupeň (210 Kč)",
+				invPlna: "III. stupeň (420 Kč)",
+				detiHint: "Na první dítě 1 267 Kč, na druhé 1 860 Kč, na třetí a další 2 320 Kč. U dítěte se ZTP/P je částka dvojnásobná.",
+				vozidloNadpis: "Služební vozidlo a nepeněžní příjem",
+				vozidloCena: "Vstupní cena vozidla",
+				vozidloHint: "Vstupní cena je včetně DPH. Do základu pojistného a daně vstupuje 1 % vstupní ceny měsíčně, nejméně 1 000 Kč. U nízkoemisního vozidla 0,5 %, u bezemisního 0,25 %.",
+				autoBezne: "Běžné vozidlo",
+				autoBezneHint: "1 % ze vstupní ceny včetně DPH, nejméně 1 000 Kč",
+				autoNizko: "Nízkoemisní vozidlo",
+				autoNizkoHint: "0,5 % ze vstupní ceny včetně DPH, nejméně 1 000 Kč",
+				autoNula: "Bezemisní vozidlo",
+				autoNulaHint: "0,25 % ze vstupní ceny včetně DPH, nejméně 1 000 Kč",
+				nepenezni: "Nepeněžní příjem nad limit",
+				nepenezniHint: "Částka nad osvobozený limit. Zvyšuje základ pojistného a daně stejně jako služební vozidlo a do výplaty se nezapočítává.",
+				kdo: "Kdo kolik zaplatí a dostane",
+				kdoLead: "Sloupce porovnávají měsíční tok peněz. Výška sloupce je podíl vůči tomu, co celkem zaplatí zaměstnavatel.",
+				zamestnanec: "Zaměstnanec",
+				naUcet: "dostane na účet",
+				stat: "Stát",
+				statPlus: "získá na odvodech",
+				statMinus: "vyplatí navíc",
+				zamestnavatel: "Zaměstnavatel",
+				cenaPracePod: "zaplatí jako cenu práce",
+				kam: "Kam jdou peníze zaměstnavatele",
+				dohromady: "", //Dohromady 100 % ceny práce
+				socialni: "sociální",
+				zdravotni: "zdravotní",
+				dan: "daň",
+				bonus: "daňový bonus",
+				tok: "Tok peněz",
+				polozka: "Položka",
+				zdravotniPoj: "Zdravotní pojištění",
+				socialniPoj: "Sociální pojištění",
+				zaloha: "Záloha na daň",
+				danSazba: "15 %, nad 146 901 Kč sazba 23 %",
+				slevyRadek: "Slevy a daňové zvýhodnění",
+				vysledek: "Výsledek",
+				foot: "Orientační měsíční výpočet pro rok 2026 při běžné sazbě pojistného zaměstnavatele 24,8 %. Minimální mzda 22 400 Kč. U DPP se sociální a zdravotní pojištění počítá až z příjmu nad 11 999 Kč, u DPČ nad 4 499 Kč. Volba „neuplatňovat minimální vyměřovací základ“ vypne doplatek zdravotního pojištění do minimální mzdy. Počítá se podepsané prohlášení poplatníka, bez exekucí, dalších srážek a bez ročního zúčtování daně. Roční strop sociálního pojištění se v měsíčním pohledu nekrátí.",
+				tisk: "Tisk",
+				title: "Kalkulačka čisté mzdy | CLA Czech Republic"
+			},
+			en: {
+				kicker: "Payroll calculator 2026",
+				jazyk: "Language",
+				typAria: "Type of engagement",
+				pp: "employment contract",
+				dpp: "agreement to complete a job",
+				dpc: "agreement to perform work",
+				rezimAria: "Calculation mode",
+				snizit: "Decrease by 1,000 CZK",
+				zvysit: "Increase by 1,000 CZK",
+				mena: "CZK",
+				slevy: "Tax reliefs and credits",
+				poplatnik: "Basic taxpayer credit",
+				poplatnikHint: "CZK 2,570 a month for anyone who has signed the taxpayer declaration",
+				ztp: "ZTP/P card",
+				ztpHint: "CZK 1,345 credit, can be combined with a disability pension",
+				duchodce: "Working old-age pensioner",
+				duchodceHint: "does not pay the 6.5% pension insurance; 0.6% sickness insurance remains",
+				mvz: "Do not apply the minimum assessment base",
+				mvzHint: "The minimum assessment base means health insurance is calculated on at least the minimum wage of CZK 22,400. If the wage or fee is lower, the employee pays the difference. <b>Tick this for students, pensioners, people on maternity or parental leave, people caring full-time for a child under 7</b>, people registered with the labour office, and others who are not subject to this top-up.",
+				deti: "Number of children",
+				detiMene: "Remove one child",
+				detiVice: "Add a child",
+				detiZtp: "Of which children with a ZTP/P card",
+				detiZtpMene: "Fewer children with a ZTP/P card",
+				detiZtpVice: "More children with a ZTP/P card",
+				invalidita: "Disability pension",
+				invZadna: "none",
+				invCastecna: "1st and 2nd degree (CZK 210)",
+				invPlna: "3rd degree (CZK 420)",
+				detiHint: "CZK 1,267 for the first child, CZK 1,860 for the second, and CZK 2,320 for the third and each further child. The amount is doubled for a child with a ZTP/P card.",
+				vozidloNadpis: "Company car and non-cash income",
+				vozidloCena: "Vehicle purchase price",
+				vozidloHint: "The purchase price includes VAT. 1% of the purchase price a month enters the insurance and tax base, at least CZK 1,000. For a low-emission vehicle the rate is 0.5%, for a zero-emission vehicle 0.25%.",
+				autoBezne: "Ordinary vehicle",
+				autoBezneHint: "1% of the VAT-inclusive purchase price, at least CZK 1,000",
+				autoNizko: "Low-emission vehicle",
+				autoNizkoHint: "0.5% of the VAT-inclusive purchase price, at least CZK 1,000",
+				autoNula: "Zero-emission vehicle",
+				autoNulaHint: "0.25% of the VAT-inclusive purchase price, at least CZK 1,000",
+				nepenezni: "Non-cash income above the limit",
+				nepenezniHint: "The amount above the exempt limit. It increases the insurance and tax base in the same way as a company car and is not included in take-home pay.",
+				kdo: "Who pays and who receives what",
+				kdoLead: "The columns compare the monthly flow of money. The height of a column is its share of what the employer pays in total.",
+				zamestnanec: "Employee",
+				naUcet: "received in the bank",
+				stat: "State",
+				statPlus: "receives in contributions",
+				statMinus: "pays out extra",
+				zamestnavatel: "Employer",
+				cenaPracePod: "pays as the labour cost",
+				kam: "Where the employer’s money goes",
+				dohromady: "Together, 100% of the labour cost",
+				socialni: "social",
+				zdravotni: "health",
+				dan: "tax",
+				bonus: "tax bonus",
+				tok: "Money flow",
+				polozka: "Item",
+				zdravotniPoj: "Health insurance",
+				socialniPoj: "Social insurance",
+				zaloha: "Income tax advance",
+				danSazba: "15%, and 23% above CZK 146,901",
+				slevyRadek: "Reliefs and child tax credit",
+				vysledek: "Result",
+				foot: "An indicative monthly calculation for 2026 at the standard employer insurance rate of 24.8%. The minimum wage is CZK 22,400. For a DPP, social and health insurance is calculated only on income above CZK 11,999; for a DPČ, above CZK 4,499. The option “do not apply the minimum assessment base” turns off the health-insurance top-up to the minimum wage. The calculation assumes a signed taxpayer declaration, with no enforcement deductions, other deductions or an annual tax reconciliation. The annual social-insurance cap is not applied in this monthly view.",
+				tisk: "Print",
+				title: "Net salary calculator | CLA Czech Republic"
+			}
+		};
+
+		function kcNaHalere(kc) {
+			return Math.round((Number(kc) || 0) * 100);
+		}
+
+		function pojistne(kc, tisiciny) {
+			return Math.ceil(kcNaHalere(kc) * tisiciny / 100000 - 1e-9);
+		}
+
+		function danZeZakladu(zaklad) {
+			if (zaklad <= ROK.hranice23) return Math.ceil(zaklad * 15 / 100 - 1e-9);
+			return Math.ceil((ROK.hranice23 * 15 + (zaklad - ROK.hranice23) * 23) / 100 - 1e-9);
+		}
+
+		function limitProTyp(typ) {
+			if (typ === "dpp") return ROK.limitDpp;
+			if (typ === "dpc") return ROK.limitDpc;
+			return null;
+		}
+
+		function benefitVozidla(o) {
+			const vozidlo = Math.max(0, Number(o.vozidlo) || 0);
+			if (vozidlo <= 0) return { castka: 0, sazba: "" };
+			let sazba = 0.01;
+			if (o.autoSazba === "bezemisni") sazba = 0.0025;
+			else if (o.autoSazba === "nizkoemisni") sazba = 0.005;
+			let castka = Math.round(vozidlo * sazba * 100) / 100;
+			if (castka < 1000) castka = 1000;
+			return { castka: castka, sazba: sazba };
+		}
+
+		function benefitNavic(o) {
+			return benefitVozidla(o).castka + Math.max(0, Number(o.nepenezni) || 0);
+		}
+
+		function spocitej(hrubaVstup, o) {
+			const hrubaHotovost = Math.max(0, Number(hrubaVstup) || 0);
+			const auto = benefitVozidla(o);
+			const nepenezni = Math.max(0, Number(o.nepenezni) || 0);
+			const benefit = auto.castka + nepenezni;
+			const zakladPoj = hrubaHotovost + benefit;
+			const limit = limitProTyp(o.typ);
+			const pojisteni = limit == null || zakladPoj > limit;
+
+			let socEe = 0;
+			let socEr = 0;
+			let zdravEe = 0;
+			let zdravEr = 0;
+			let doplatekZdravi = false;
+			if (pojisteni) {
+				const socSazba = o.duchodce ? 6 : 71;
+				socEe = pojistne(zakladPoj, socSazba);
+				socEr = pojistne(zakladPoj, 248);
+				zdravEr = pojistne(zakladPoj, 90);
+				doplatekZdravi = !o.bezMvz && zakladPoj < ROK.minMzda;
+				if (doplatekZdravi) {
+					const halMin = ROK.minMzda * 100;
+					const halZak = kcNaHalere(zakladPoj);
+					zdravEe = Math.ceil((halMin * 45 + (halMin - halZak) * 90) / 100000 - 1e-9);
+				} else {
+					zdravEe = pojistne(zakladPoj, 45);
+				}
+			}
+
+			const zakladDane = Math.ceil(zakladPoj / 100 - 1e-9) * 100;
+			const danPred = danZeZakladu(zakladDane);
+
+			let slevy = 0;
+			if (o.poplatnik) slevy += ROK.slevaPoplatnik;
+			if (o.invalidita === "castecna") slevy += ROK.slevaInv12;
+			if (o.invalidita === "plna") slevy += ROK.slevaInv3;
+			if (o.ztp) slevy += ROK.slevaZtp;
+
+			const deti = Math.max(0, cele(o.deti));
+			const detiZtp = Math.min(deti, Math.max(0, cele(o.detiZtp)));
+			let zvyhodneni = 0;
+			for (let i = 0; i < deti; i++) {
+				const pasmo = i === 0 ? ROK.deti[0] : (i === 1 ? ROK.deti[1] : ROK.deti[2]);
+				const jeZtp = i >= deti - detiZtp;
+				zvyhodneni += jeZtp ? pasmo * 2 : pasmo;
+			}
+			const danPoSleve = Math.max(0, danPred - slevy);
+			let danKZaplaceni = danPoSleve;
+			let bonus = 0;
+			let bonusStav = "";
+			let bonusMaly = 0;
+
+			if (zvyhodneni > 0) {
+				/* U DPP se měsíční bonus vyplácí i pod polovinou minimální mzdy, stejně jako na e15. */
+				const bonusPrijemOk = o.typ === "dpp" || zakladPoj >= ROK.bonusMinPrijem;
+				if (bonusPrijemOk) {
+					const rozdil = danPoSleve - zvyhodneni;
+					if (rozdil < 0) {
+						if (-rozdil >= ROK.bonusMinCastka) {
+							bonus = -rozdil;
+							danKZaplaceni = -bonus;
+						} else {
+							danKZaplaceni = 0;
+							bonusStav = "pod50";
+							bonusMaly = -rozdil;
+						}
+					} else {
+						danKZaplaceni = rozdil;
+					}
+				} else {
+					danKZaplaceni = Math.max(0, danPoSleve - zvyhodneni);
+					if (danPoSleve - zvyhodneni < 0) bonusStav = "podPrijem";
+				}
+			}
+
+			const poznamkyKody = [];
+			if (bonusStav) poznamkyKody.push(bonusStav);
+			if (doplatekZdravi && zakladPoj > 0) poznamkyKody.push("mvz");
+			if (pojisteni && o.bezMvz && zakladPoj > 0 && zakladPoj < ROK.minMzda) poznamkyKody.push("bezMvz");
+			if (!pojisteni && limit != null) poznamkyKody.push("podLimitem");
+			if (pojisteni && limit != null) poznamkyKody.push("nadLimitem");
+			if (zakladDane > ROK.hranice23) poznamkyKody.push("sazba23");
+			if (auto.castka > 0) poznamkyKody.push("auto");
+			if (nepenezni > 0) poznamkyKody.push("nepenezni");
+			if (zakladPoj * 12 > ROK.stropSocRok) poznamkyKody.push("strop");
+
+			const cista = hrubaHotovost - socEe - zdravEe - danKZaplaceni;
+			const cenaPrace = hrubaHotovost + socEr + zdravEr;
+			const stat = socEe + socEr + zdravEe + zdravEr + danKZaplaceni;
+			const uplatnene = danPred - danKZaplaceni;
+
+			return {
+				hruba: hrubaHotovost,
+				benefit: benefit,
+				zakladPoj: zakladPoj,
+				zakladDane: zakladDane,
+				pojisteni: pojisteni,
+				doplatekZdravi: doplatekZdravi,
+				socEe: socEe,
+				socEr: socEr,
+				zdravEe: zdravEe,
+				zdravEr: zdravEr,
+				danPred: danPred,
+				danKZaplaceni: danKZaplaceni,
+				bonus: bonus,
+				zvyhodneni: zvyhodneni,
+				slevy: slevy,
+				uplatnene: uplatnene,
+				cista: cista,
+				cenaPrace: cenaPrace,
+				stat: stat,
+				poznamkyKody: poznamkyKody,
+				bonusMaly: bonusMaly,
+				autoCastka: auto.castka,
+				autoSazba: auto.sazba,
+				nepenezni: nepenezni,
+				limit: limit
+			};
+		}
+
+		function sazbaText(sazba, lang) {
+			const procent = Math.round(sazba * 10000) / 100;
+			if (lang === "en") return procent + "%";
+			return String(procent).replace(".", ",") + " %";
+		}
+
+		function textPoznamky(r, lang) {
+			const kc = function (n) { return formatKc(n, lang); };
+			const en = lang === "en";
+			const texty = {
+				pod50: en
+					? "The tax bonus of " + kc(r.bonusMaly) + " is below CZK 50, so it is not paid out for the month. Tax is zero."
+					: "Daňový bonus " + kc(r.bonusMaly) + " je nižší než 50 Kč, měsíčně se proto nevyplácí. Daň je nulová.",
+				podPrijem: en
+					? "Gross income is below half the minimum wage (CZK 11,200), so the tax bonus is not paid. The child tax credit reduces tax to zero at most."
+					: "Hrubý příjem nedosahuje poloviny minimální mzdy (11 200 Kč), daňový bonus se nevyplatí. Zvýhodnění na děti sníží daň nejvýše na nulu.",
+				mvz: en
+					? "The wage is below the minimum wage of CZK 22,400, so the minimum assessment base applies. Health insurance is calculated as if income reached at least the minimum wage, and the employee pays the difference."
+					: "Mzda je nižší než minimální mzda 22 400 Kč, proto se uplatní minimální vyměřovací základ. Zdravotní pojištění se dopočítá, jako by příjem dosáhl aspoň minimální mzdy, a rozdíl doplácí zaměstnanec.",
+				bezMvz: en
+					? "The minimum assessment base is not applied. Health insurance is calculated only on actual income, with no top-up to the minimum wage."
+					: "Minimální vyměřovací základ se neuplatňuje. Zdravotní pojištění se počítá jen ze skutečného příjmu, bez doplatku do minimální mzdy.",
+				podLimitem: en
+					? "Income including non-cash benefits does not exceed " + kc(r.limit) + ", so neither social nor health insurance is payable."
+					: "Příjem včetně nepeněžních plnění nepřesahuje " + kc(r.limit) + ", sociální ani zdravotní pojištění se proto neplatí.",
+				nadLimitem: en
+					? "Income is above the limit of " + kc(r.limit) + ", so social and health insurance is payable on this agreement."
+					: "Příjem je nad limitem " + kc(r.limit) + ", z dohody se platí sociální a zdravotní pojištění.",
+				sazba23: en
+					? "The part of the tax base above CZK 146,901 is taxed at 23%."
+					: "Část základu daně nad 146 901 Kč je zdaněna sazbou 23 %.",
+				auto: en
+					? "The company car increases the insurance and tax base by " + kc(r.autoCastka) + " (" + sazbaText(r.autoSazba, lang) + " of the VAT-inclusive purchase price, at least CZK 1,000). This amount is not included in take-home pay."
+					: "Služební vozidlo zvyšuje základ pojistného a daně o " + kc(r.autoCastka) + " (" + sazbaText(r.autoSazba, lang) + " ze vstupní ceny včetně DPH, nejméně 1 000 Kč). Do výplaty se tato částka nezapočítává.",
+				nepenezni: en
+					? "Non-cash income above the limit increases the insurance and tax base by " + kc(r.nepenezni) + ". It is not included in take-home pay."
+					: "Nepeněžní příjem nad limit zvyšuje základ pojistného a daně o " + kc(r.nepenezni) + ". Do výplaty se nezapočítává.",
+				strop: en
+					? "If the same wage were paid all year, social insurance would no longer be payable on the assessment base above CZK 2,350,416 a year. This monthly calculation does not apply the cap."
+					: "Při stejné mzdě po celý rok by se sociální pojištění z vyměřovacího základu nad 2 350 416 Kč ročně už neplatilo. Tento měsíční výpočet strop nekrátí."
+			};
+			return r.poznamkyKody.map(function (kod) { return texty[kod]; }).filter(Boolean);
+		}
+
+		function nejmensiHruba(cil, o, od, strop) {
+			let lo = od;
+			let hi = strop == null ? Math.max(od + 1000, Math.round(Math.abs(cil) * 2) + 1000) : strop;
+			if (strop == null) {
+				let straz = 0;
+				while (spocitej(hi, o).cista < cil && hi < 20000000 && straz < 30) {
+					hi *= 2;
+					straz++;
+				}
+				if (spocitej(hi, o).cista < cil) return null;
+			} else if (spocitej(strop, o).cista + 1e-6 < cil) {
+				return null;
+			}
+			while (lo < hi) {
+				const mid = Math.floor((lo + hi) / 2);
+				if (spocitej(mid, o).cista < cil) lo = mid + 1;
+				else hi = mid;
+			}
+			const odScan = Math.max(od, lo - 200);
+			for (let g = odScan; g <= lo; g++) {
+				if (spocitej(g, o).cista + 1e-6 >= cil) return g;
+			}
+			return lo;
+		}
+
+		function hrubyZCiste(cilVstup, o) {
+			const cil = Number(cilVstup) || 0;
+			const limit = limitProTyp(o.typ);
+			if (limit == null) {
+				const hruba = nejmensiHruba(cil, o, 0, null);
+				return hruba == null ? 0 : hruba;
+			}
+			/* Na limitu dohody pojistné skokově naskočí a čistá odměna klesne.
+			   Hledá se proto zvlášť pod limitem a nad ním a vezme se nižší hrubá odměna. */
+			const extra = benefitNavic(o);
+			const maxBez = Math.floor(limit - extra + 1e-9);
+			const kandidati = [];
+			if (maxBez >= 0) {
+				const pod = nejmensiHruba(cil, o, 0, maxBez);
+				if (pod != null) kandidati.push(pod);
+			}
+			const nad = nejmensiHruba(cil, o, Math.max(0, maxBez + 1), null);
+			if (nad != null) kandidati.push(nad);
+			if (!kandidati.length) return Math.max(0, maxBez + 1);
+			return Math.min.apply(null, kandidati);
+		}
+
+		new Vue({
+			el: "#cla-mzda",
+			/* [[ ]] místo {{ }}. Kalkulačka se vkládá do WordPressu a složené závorky tam může sebrat šablona nebo jiný skript dřív, než je Vue přečte. */
+			delimiters: ["[[", "]]"],
+			data: {
+				lang: aktivniLang,
+				typ: "pp",
+				mode: "hruba",
+				castka: 45000,
+				castkaText: formatTisice(45000),
+				poplatnik: true,
+				ztp: false,
+				duchodce: false,
+				bezMvz: false,
+				invalidita: "zadna",
+				deti: 0,
+				detiZtp: 0,
+				vozidlo: 0,
+				vozidloText: formatTisice(0),
+				autoSazba: "bezna",
+				nepenezni: 0,
+				nepenezniText: formatTisice(0)
+			},
+			computed: {
+				t: function () {
+					return SLOVNIK[this.lang] || SLOVNIK.cs;
+				},
+				volby: function () {
+					return {
+						typ: this.typ,
+						poplatnik: this.poplatnik,
+						ztp: this.ztp,
+						duchodce: this.duchodce,
+						bezMvz: this.bezMvz,
+						invalidita: this.invalidita,
+						deti: this.deti,
+						detiZtp: this.detiZtp,
+						vozidlo: this.vozidlo,
+						autoSazba: this.autoSazba,
+						nepenezni: this.nepenezni
+					};
+				},
+				detiKladne: function () {
+					return Math.max(0, cele(this.deti));
+				},
+				vozidloKladne: function () {
+					return Math.max(0, Number(this.vozidlo) || 0);
+				},
+				v: function () {
+					const o = this.volby;
+					const r = this.mode === "cista" ? spocitej(hrubyZCiste(this.castkaKladna, o), o) : spocitej(this.castkaKladna, o);
+					r.poznamky = textPoznamky(r, this.lang);
+					return r;
+				},
+				castkaKladna: function () {
+					const n = Number(this.castka);
+					if (!isFinite(n) || n < 0) return 0;
+					return n;
+				},
+				vstupLabel: function () {
+					const en = this.lang === "en";
+					if (this.typ === "pp") return this.mode === "cista" ? (en ? "Net wage" : "Čistá mzda") : (en ? "Gross wage" : "Hrubá mzda");
+					return this.mode === "cista" ? (en ? "Net fee" : "Čistá odměna") : (en ? "Gross fee" : "Hrubá odměna");
+				},
+				vystup: function () {
+					const en = this.lang === "en";
+					const odmena = this.typ !== "pp";
+					if (this.mode === "cista") {
+						return {
+							hlavni: en ? "Calculated gross" : "Dopočtená hrubá",
+							konec: odmena ? (en ? "fee" : "odměna") : (en ? "wage" : "mzda")
+						};
+					}
+					return {
+						hlavni: odmena ? (en ? "Net fee" : "Čistá odměna") : (en ? "Net wage" : "Čistá mzda"),
+						konec: ""
+					};
+				},
+				nadpis: function () {
+					const en = this.lang === "en";
+					return this.typ === "pp" ? (en ? "Net and gross wage" : "Čistá a hrubá mzda") : (en ? "Net and gross fee" : "Čistá a hrubá odměna");
+				},
+				lead: function () {
+					const en = this.lang === "en";
+					const zCiste = this.mode === "cista";
+					if (this.typ === "dpp") {
+						if (zCiste) {
+							return en
+								? "Enter how much you want to receive in your bank account from an agreement to complete a job. The calculator works out the gross fee. Social and health insurance is paid only when income is above CZK 11,999."
+								: "Zadejte, kolik chcete z dohody o provedení práce dostat na účet. Kalkulačka dopočítá hrubou odměnu. Sociální a zdravotní pojištění se platí až z příjmu nad 11 999 Kč.";
+						}
+						return en
+							? "For an agreement to complete a job, enter the gross fee: the amount before tax and insurance. Up to CZK 11,999, no social or health insurance is paid. The figure on the right is what lands in your bank account."
+							: "U dohody o provedení práce zadejte hrubou odměnu, tedy částku před daní a pojištěním. Do 11 999 Kč se z ní sociální ani zdravotní pojištění neplatí. Vpravo je částka, která vám přijde na účet.";
+					}
+					if (this.typ === "dpc") {
+						if (zCiste) {
+							return en
+								? "Enter how much you want to receive in your bank account from an agreement to perform work. The calculator works out the gross fee. Social and health insurance is paid only when income is above CZK 4,499."
+								: "Zadejte, kolik chcete z dohody o pracovní činnosti dostat na účet. Kalkulačka dopočítá hrubou odměnu. Sociální a zdravotní pojištění se platí až z příjmu nad 4 499 Kč.";
+						}
+						return en
+							? "For an agreement to perform work, enter the gross fee: the amount before tax and insurance. Up to CZK 4,499, no social or health insurance is paid. The figure on the right is what lands in your bank account."
+							: "U dohody o pracovní činnosti zadejte hrubou odměnu, tedy částku před daní a pojištěním. Do 4 499 Kč se z ní sociální ani zdravotní pojištění neplatí. Vpravo je částka, která vám přijde na účet.";
+					}
+					if (zCiste) {
+						return en
+							? "Enter how much you want to receive in your bank account. The calculator works out the gross wage for the contract and what the employer pays for you in total."
+							: "Zadejte, kolik chcete dostat na účet. Kalkulačka dopočítá hrubou mzdu do smlouvy a to, kolik na vás zaměstnavatel celkem zaplatí.";
+					}
+					return en
+						? "The gross wage is the amount in the contract before tax and insurance. On the right you will see what lands in your bank account, and below that what the employer pays for you in total."
+						: "Hrubá mzda je částka ve smlouvě před daní a pojištěním. Vpravo uvidíte, kolik vám z ní přijde na účet, a dole i to, kolik na vás zaměstnavatel celkem zaplatí.";
+				},
+				rezimHruba: function () {
+					const en = this.lang === "en";
+					return this.typ === "pp" ? (en ? "From gross wage" : "Z hrubé mzdy") : (en ? "From gross fee" : "Z hrubé odměny");
+				},
+				rezimCista: function () {
+					const en = this.lang === "en";
+					return this.typ === "pp" ? (en ? "From net wage" : "Z čisté mzdy") : (en ? "From net fee" : "Z čisté odměny");
+				},
+				hrubaNazev: function () {
+					const en = this.lang === "en";
+					return this.typ === "pp" ? (en ? "Gross wage" : "Hrubá mzda") : (en ? "Gross fee" : "Hrubá odměna");
+				},
+				cistaNazev: function () {
+					const en = this.lang === "en";
+					return this.typ === "pp" ? (en ? "net wage" : "čistá mzda") : (en ? "net fee" : "čistá odměna");
+				},
+				detiAktivni: function () {
+					const castka = this.kc(this.v.zvyhodneni);
+					if (this.lang === "en") return "Child tax credit: " + castka + " a month. Children with a ZTP/P card are placed in the higher bands; the taxpayer may choose the order.";
+					return "Daňové zvýhodnění na děti: " + castka + " měsíčně. Děti se ZTP/P jsou ve vyšších pásmech, poplatník si pořadí může zvolit.";
+				},
+				statPodtitul: function () {
+					if (this.v.stat >= 0) return this.t.statPlus;
+					return this.t.statMinus;
+				},
+				heroCastka: function () {
+					return this.mode === "cista" ? this.v.hruba : this.v.cista;
+				},
+				vysledekKlic: function () {
+					return this.kc(this.heroCastka);
+				},
+				heroPoznamka: function () {
+					const en = this.lang === "en";
+					const dohoda = this.typ !== "pp";
+					if (this.mode === "cista") {
+						const cil = this.kc(this.castkaKladna);
+						const hruba = this.kc(this.v.hruba);
+						const skutecna = this.kc(this.v.cista);
+						if (skutecna === cil) {
+							if (en) return "For the employee to receive " + cil + " net, the gross " + (dohoda ? "fee" : "wage") + " comes to " + hruba + ".";
+							return "Aby zaměstnanec dostal " + cil + " čistého, " + (dohoda ? "hrubá odměna" : "hrubá mzda") + " vychází na " + hruba + ".";
+						}
+						if (en) return "Exactly " + cil + " net cannot be reached from a whole-crown gross amount. The next higher take-home pay is " + skutecna + " at a gross amount of " + hruba + ".";
+						return "Přesně " + cil + " čistého z celé koruny hrubé částky nevychází. Nejbližší vyšší výplata je " + skutecna + " při hrubé částce " + hruba + ".";
+					}
+					if (en) return "The employer’s cost of this " + (dohoda ? "fee" : "wage") + " is " + this.kc(this.v.cenaPrace) + ".";
+					return "Zaměstnavatel na tuto " + (dohoda ? "odměnu" : "mzdu") + " vynaloží " + this.kc(this.v.cenaPrace) + ".";
+				},
+				socPopis: function () {
+					const en = this.lang === "en";
+					if (!this.v.pojisteni) return en ? "not payable up to the agreement limit" : "do limitu dohody se neplatí";
+					if (this.duchodce) return en ? "pensioner 0.6%, employer 24.8%" : "důchodce 0,6 %, zaměstnavatel 24,8 %";
+					return en ? "employee 7.1%, employer 24.8%" : "zaměstnanec 7,1 %, zaměstnavatel 24,8 %";
+				},
+				zdravPopis: function () {
+					const en = this.lang === "en";
+					if (!this.v.pojisteni) return en ? "not payable up to the agreement limit" : "do limitu dohody se neplatí";
+					if (this.v.doplatekZdravi) return en ? "the employee tops up the difference to the minimum wage, the employer pays 9% of actual income" : "zaměstnanec doplácí rozdíl do minimální mzdy, zaměstnavatel 9 % ze skutečného příjmu";
+					return en ? "employee 4.5%, employer 9%" : "zaměstnanec 4,5 %, zaměstnavatel 9 %";
+				},
+				slevyPopis: function () {
+					const en = this.lang === "en";
+					const dily = [];
+					if (this.poplatnik) dily.push(en ? "taxpayer CZK 2,570" : "poplatník 2 570 Kč");
+					if (this.invalidita === "castecna") dily.push(en ? "disability, 1st and 2nd degree, CZK 210" : "invalidita I. a II. stupně 210 Kč");
+					if (this.invalidita === "plna") dily.push(en ? "disability, 3rd degree, CZK 420" : "invalidita III. stupně 420 Kč");
+					if (this.ztp) dily.push(en ? "ZTP/P CZK 1,345" : "ZTP/P 1 345 Kč");
+					if (this.v.zvyhodneni > 0) dily.push((en ? "children " : "děti ") + formatKc(this.v.zvyhodneni, this.lang));
+					if (!dily.length) return en ? "none applied" : "nejsou uplatněné";
+					return dily.join(", ");
+				},
+				podilText: function () {
+					if (this.lang === "en") return "Employee " + this.pct(this.v.cista) + ", state " + this.pct(this.v.stat);
+					return "Zaměstnanec " + this.pct(this.v.cista) + ", stát " + this.pct(this.v.stat);
+				}
+			},
+			watch: {
+				deti: function () {
+					if (cele(this.deti) < 0) this.deti = 0;
+					if (cele(this.deti) > 15) this.deti = 15;
+					if (cele(this.detiZtp) > cele(this.deti)) this.detiZtp = cele(this.deti);
+				},
+				detiZtp: function () {
+					if (cele(this.detiZtp) < 0) this.detiZtp = 0;
+					if (cele(this.detiZtp) > cele(this.deti)) this.detiZtp = cele(this.deti);
+				}
+			},
+			created: function () {
+				this.syncLang(false);
+			},
+			methods: {
+				kc: function (n) {
+					return formatKc(n, this.lang);
+				},
+				pct: function (castka) {
+					if (!this.v.cenaPrace) return this.lang === "en" ? "0%" : "0 %";
+					const hodnota = Math.round(castka / this.v.cenaPrace * 1000) / 10;
+					if (this.lang === "en") return hodnota.toLocaleString("en-GB") + "%";
+					return hodnota.toLocaleString("cs-CZ") + " %";
+				},
+				syncLang: function (zapsatUrl) {
+					aktivniLang = this.lang;
+					document.documentElement.lang = this.lang;
+					document.title = this.t.title;
+					if (!zapsatUrl) return;
+					try {
+						const url = new URL(window.location.href);
+						if (this.lang === "en") url.searchParams.set("lang", "en");
+						else url.searchParams.delete("lang");
+						history.replaceState(null, "", url.pathname + url.search + url.hash);
+					} catch (e) {}
+				},
+				tisk: function () {
+					window.print();
+				},
+				setLang: function (lang) {
+					if (lang !== "en" && lang !== "cs") lang = "cs";
+					if (lang === this.lang) return;
+					this.lang = lang;
+					aktivniLang = lang;
+					this.castkaText = formatTisice(this.castka);
+					this.vozidloText = formatTisice(this.vozidlo);
+					this.nepenezniText = formatTisice(this.nepenezni);
+					this.syncLang(true);
+				},
+				podil: function (castka) {
+					if (!this.v.cenaPrace) return "0%";
+					const p = Math.max(0, castka) / this.v.cenaPrace * 100;
+					return Math.min(100, p) + "%";
+				},
+				vyska: function (castka) {
+					const max = Math.max(this.v.cista, Math.abs(this.v.stat), this.v.cenaPrace, 1);
+					let p = Math.max(0, castka) / max * 100;
+					if (castka > 0 && p < 6) p = 6;
+					return p + "%";
+				},
+				nastavCastku: function (hodnota) {
+					const cislo = Math.max(0, cele(hodnota));
+					this.castka = cislo;
+					this.castkaText = formatTisice(cislo);
+				},
+				krokCastky: function (krok) {
+					this.nastavCastku(this.castkaKladna + krok);
+				},
+				zapisFormatovane: function (event, cisloKlic, textKlic) {
+					const el = event.target;
+					const puvodni = el.value;
+					const caret = el.selectionStart || 0;
+					const cislicPred = puvodni.slice(0, caret).replace(/\D/g, "").length;
+					const cislice = puvodni.replace(/\D/g, "");
+					const text = cislice === "" ? "" : formatTisice(parseInt(cislice, 10));
+					this[cisloKlic] = cislice === "" ? 0 : parseInt(cislice, 10);
+					this[textKlic] = text;
+					this.$nextTick(function () {
+						el.value = text;
+						let videno = 0;
+						let pozice = text.length;
+						if (cislicPred === 0) pozice = 0;
+						else {
+							for (let i = 0; i < text.length; i++) {
+								if (/\d/.test(text.charAt(i))) videno++;
+								if (videno >= cislicPred) {
+									pozice = i + 1;
+									break;
+								}
+							}
+						}
+						if (el.setSelectionRange) el.setSelectionRange(pozice, pozice);
+					});
+				},
+				doplnFormatovane: function (cisloKlic, textKlic) {
+					if (this[textKlic] === "") {
+						this[cisloKlic] = 0;
+						this[textKlic] = formatTisice(0);
+					}
+				},
+				zapisCastku: function (event) {
+					this.zapisFormatovane(event, "castka", "castkaText");
+				},
+				doplnCastku: function () {
+					this.doplnFormatovane("castka", "castkaText");
+				},
+				zapisVozidlo: function (event) {
+					this.zapisFormatovane(event, "vozidlo", "vozidloText");
+				},
+				doplnVozidlo: function () {
+					this.doplnFormatovane("vozidlo", "vozidloText");
+				},
+				zapisNepenezni: function (event) {
+					this.zapisFormatovane(event, "nepenezni", "nepenezniText");
+				},
+				doplnNepenezni: function () {
+					this.doplnFormatovane("nepenezni", "nepenezniText");
+				},
+				setMode: function (mode) {
+					if (mode === this.mode) return;
+					const vysledek = this.v;
+					this.nastavCastku(mode === "cista" ? vysledek.cista : vysledek.hruba);
+					this.mode = mode;
+				},
+				setTyp: function (typ) {
+					if (typ === this.typ) return;
+					this.typ = typ;
+				},
+				zmenDeti: function (krok) {
+					let d = cele(this.deti) + krok;
+					if (d < 0) d = 0;
+					if (d > 15) d = 15;
+					this.deti = d;
+				},
+				zmenDetiZtp: function (krok) {
+					let d = cele(this.detiZtp) + krok;
+					if (d < 0) d = 0;
+					if (d > cele(this.deti)) d = cele(this.deti);
+					this.detiZtp = d;
+				}
+			}
+		});
+	})();
+</script>
+
+</body>
+</html>
